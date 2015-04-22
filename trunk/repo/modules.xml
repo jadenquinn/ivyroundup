@@ -1,7 +1,7 @@
 <?xml-stylesheet type="text/xsl" href="xsl/modules.xsl"?>
 <modules>
-  <timestamp>2015-04-20 16:56:10 UTC</timestamp>
-  <svnRevision>3361</svnRevision>
+  <timestamp>2015-04-22 15:02:55 UTC</timestamp>
+  <svnRevision>3363</svnRevision>
   <org name="bixo">
     <mod name="bixo">
       <rev name="0.9.1"/>
@@ -2597,6 +2597,7 @@
       <rev name="1.0.925"/>
       <rev name="1.0.946"/>
       <rev name="1.0.964"/>
+      <rev name="1.0.972"/>
     </mod>
     <mod name="hl7lib">
       <rev name="1.0.10"/>
