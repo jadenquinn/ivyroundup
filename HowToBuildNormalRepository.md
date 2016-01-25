@@ -1,0 +1,27 @@
+## Overview ##
+
+While the primary goal of the Ivy RoundUp project is to provide an online Ivy repository, not repository build tools, it's easy to use the Ivy RoundUp build infrastructure to create a normal Ivy repository. How to do this is described here.
+
+The Ivy RoundUp repository contains `ivy.xml` files but no actual artifacts. In place of artifacts, it has `packager.xml` files which describe how to download and (if necessary) extract artifacts on-demand. An "ant" task in allows you to build a normal repository automatically using this information.
+
+## Prerequisites ##
+
+  1. You must have a version of Ivy containing the **packager resolver** installed on your machine (Ivy 2.0.0-rc1 or later).
+  1. You'll need to [check out the source code](http://code.google.com/p/ivyroundup/source/checkout) for Ivy RoundUp using Subversion.
+  1. You'll need to be running on a UNIX-like O/S.
+  1. You'll need **ant** 1.6.2 or later.
+  1. You'll need to download some archive files manually (see next section).
+
+## Software Requiring License Agreements ##
+
+See ManuallyDownloadedSoftware for a list of software you must download manually, due to the requirement that you must click to accept a license.
+
+## Steps To Build Repository ##
+
+Once you've satisfied the prerequisites:
+  1. Change into the top of the appropriate tree (e.g., **trunk/**).
+  1. Run **ant**.
+
+After downloading all of the resources and resolving every module in Ivy RoundUp, your completed "normal" repository will be in **build/repo-with-artifacts**.
+
+If ant fails with `java.lang.ClassNotFoundException: org.apache.xalan.processor.TransformerFactoryImpl` then instead of running **ant** run **ant get-xalan all** or install the Xalan libraries into your ant lib.

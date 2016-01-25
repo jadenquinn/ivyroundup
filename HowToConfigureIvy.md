@@ -1,0 +1,65 @@
+## Ivy Settings ##
+
+To use the Ivy RoundUp repository, simply define a "packager" resolver in your `ivysettings.xml` that points to the Ivy RoundUp repository like so:
+
+```
+<resolvers>
+    <packager name="roundup" buildRoot="${user.home}/.ivy2/packager/build" resourceCache="${user.home}/.ivy2/packager/cache">
+        <ivy pattern="http://ivyroundup.googlecode.com/svn/trunk/repo/modules/[organisation]/[module]/[revision]/ivy.xml"/>
+        <artifact pattern="http://ivyroundup.googlecode.com/svn/trunk/repo/modules/[organisation]/[module]/[revision]/packager.xml"/>
+    </packager>
+</resolvers>
+```
+
+A couple of notes about the above configuration:
+  * You can use any directory you want for the temporary builds; this example uses `${user.home}/.ivy2/packager/build`. You may prefer another directory, e.g., `${java.io.tmpdir}/ivypackager-${user.name`}. However, you must specify _some_ location.
+  * Downloaded resources will be cached in `${user.home}/.ivy2/packager/cache`; if you don't want this, remove the `resourceCache` attribute.
+  * The URLs above point to the "trunk" of Ivy RoundUp. Eventually, there may be more stable snapshots under "branches" and "tags".
+
+**IMPORTANT:** you also have to manually download certain software that requires a license agreement. See ManuallyDownloadedSoftware for details.
+
+## Fixed Revisions of Ivy RoundUp ##
+
+If you want to always use the same, fixed revision of Ivy RoundUp and not "float" with the trunk, then you just need to include **/!svn/bc/REV** in your settings URLs, where **REV** is the revision number. For example, to always use revision **345** of Ivy RoundUp's trunk, you'd configure this way:
+```
+<ivy pattern="http://ivyroundup.googlecode.com/svn/!svn/bc/345/trunk/repo/modules/[organisation]/[module]/[revision]/ivy.xml"/>
+<artifact pattern="http://ivyroundup.googlecode.com/svn/!svn/bc/345/trunk/repo/modules/[organisation]/[module]/[revision]/packager.xml"/>
+```
+
+This is a useful technique when you want to ensure reproducible builds, e.g., for a version of your software that has already been tagged and released.
+
+## Retrieval Patterns ##
+
+Ivy RoundUp (and any other ivy repository) may contain many artifacts with the same filename. For example, two unrelated modules may both have an artifact called `util.jar`. Or several modules may have a `javadoc.zip`. So be careful with your retrieval patterns that you don't map two different artifacts to the same directory and filename.
+
+Actually, the above paragraph is correct but completely misleading. Ivy files do not define any such concept as "filename".
+
+Instead, they define artifacts. Artifacts have the following attributes:
+  * Module organisation
+  * Module name
+  * Module revision
+  * Artifact name
+  * Artifact type
+  * Artifact extension
+The only thing guaranteed to be unique for an artifact is the combination of _all_ of the above attributes (and that guarantee only applies within a single repository).
+
+Filename collisions can only happen when ivy actually retrieves the artifacts. They are only possible when you specify a retrieval filename pattern that is "degenerate". Of course, many times you can get lucky, but that just makes the error even more mysterious when it does finally occur. You may see an exception that says `Multiple artifacts of the module xxx#yyy;zzz are retrieved to the same file! Update the retrieve pattern  to fix this error`.
+
+To take an extreme example, a retrieval pattern of `"file"` will cause every artifact to map to the same filename - obviously this won't work. But neither will (in general) a seemingly reasonable pattern like `"[organisation]/[module]/[artifact]-[revision].[ext]"`, because it doesn't contain `[type]` anywhere. So a module with a "foo.jar" (JAR file artifact with `type="jar"`) and a "foo.jar" (Javadoc artifact with `type="javadoc"`) will cause a collision.
+
+The moral of the story is: if possible, always include all of the above attributes in ivy retrieval patterns. Of course, if you know you're only getting one revision of each module, you can leave that out. Or if you're confident no two modules have the same name (often the case), you can leave out the organisation. But in general, you should include as many attributes as you can for safety.
+
+Here's an example of a reasonable retrieval pattern if you want to segregate different types of artifacts into separate (sub)directories. Note that this is not perfect because there's no `[organisation]`, but typically it would work as module names are, in practice, usually unique:
+```
+artifacts/[type]s/[module]/[artifact]-[revision].[ext]
+```
+If everything has to go into the same directory, then you might do something like this:
+```
+artifacts/[module]-[type]-[artifact]-[revision].[ext]
+```
+
+The above two examples work even if you are resolving multiple types of artifacts and/or multiple revisions. If you are only resolving one revision of each module, and only `type="jar"` for example, then you can eliminate the `[revision]` and `[type]` in the pattern, e.g.:
+```
+myjars/[module]-[artifact].[ext]
+```
+Just make sure you don't then do a second resolve with a different revision or artifact type into that same directory.

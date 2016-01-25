@@ -1,0 +1,27 @@
+## Contributing to Ivy RoundUp is easy and helps Ivy users everywhere ##
+
+The main work required is adding new modules and new revisions of existing modules. All that is required for a new revision is an `ivy.xml` file and a `packager.xml` file. The format of `packager.xml` files is [documented here](http://ant.apache.org/ivy/history/latest-milestone/resolver/packager.html).
+
+If the module already exists (i.e., you're just adding a new revision), typically all you need to do is svn copy the files from the previous revision and update the release timestamp and resource SHA1 checksums.
+
+For new modules, there are plenty of examples to work from. But you should always start with an SVN copy of the [boilerplate files](http://code.google.com/p/ivyroundup/source/browse/trunk/src/boilerplate).
+
+In either case, patches should be created using the command `svn diff src/modules` run from the top-level directory.
+
+Note that Ivy RoundUp has separate _source_ (under `src/modules`) and _repository_ (under `repo/modules`) trees. All of the files under `repo` are automatically generated. **The files in the source tree are slightly different from normal** `ivy.xml` and `packager.xml` files. For example, they don't specify `organisation="..."`, `module="..."`, or `revision="..."`. Instead, this information gets added automatically during the build process based on the parent (revision), grandparent (module), and great-grandparent (organization) directory names. Also, they contain `rev="$Id$"` revision tags.
+
+Please create issues in the [issue tracker](http://code.google.com/p/ivyroundup/issues/list) to submit new or updated modules.
+
+**Please follow these guidelines when creating issues for new revisions:**
+  1. Include your new modules as a subversion patch file attached to the issue:
+    * If the module is new, the patch should be against an "svn copy" of the `src/boilerplate` files (i.e. `svn cp src/boilerplate src/modules/foo.bar/baz/1.0`)
+    * If the revision is new but the module already exists, the patch should be against the previous revision (happens automatically when you "svn copy" the previous revision, i.e. `svn cp src/modules/foo.bar/baz/1.0 src/modules/foo.bar/baz/2.0`)
+    * Include only the patch to `src/modules`, not `repo` (the contents of which are automatically generated)
+  1. Read and understand the ModuleMaintainerGuidelines.
+  1. Make sure that running `ant repo` with your new files in place under `src/modules` doesn't generate any (new) warnings or errors.
+  1. Make sure that running `ant -Dresolve.mod=foo` doesn't generate any errors (where "foo" is the name of your module; you can also use `resolve.org` and/or }`resolve.rev`; these properties also accept specify multiple names separated by commas)
+  1. Don't forget to set the "publication" attribute to the release date of the module.
+
+If you're interested in developing the Ivy RoundUp infrastructure, or becoming a regular contributor with SVN commit access, join us on the [mailing list](http://groups.google.com/group/ivyroundup).
+
+Thanks!

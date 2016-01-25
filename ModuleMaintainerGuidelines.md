@@ -1,0 +1,127 @@
+This page describes some good practices when adding or maintaining modules in Ivy RoundUp.
+
+## General ##
+
+### Overall Goals ###
+
+Ivy RoundUp has the following overall goals:
+  * **Self Sufficiency:** Ivy RoundUp is usable as a standalone repository. This means that if module A in RoundUp depends on revision X of module B, the revision X of module B must also exist in RoundUp.
+  * **Consistency in naming:** RoundUp uses consistent naming schemes for organization, module, and configuration names
+  * **Minimalism and Simplicity:** We don't include unnecessary stuff in `ivy.xml` files. Use the simplest ivy syntax available, and don't include redundant attributes that simply restate the default value.
+
+It is an explicit _non-goal_ that organization, module, and configuration names be consistent with other Ivy repositories that may already exist.
+
+### Development Setup ###
+
+Ivy RoundUp works best on UNIX based systems like Linux or Mac OS. Windows is currently not supported.
+
+Sometimes the configuration of ant causes problems. First, ensure that you have the Xalan libraries installed in your ant lib so that the ant `<xslt>` task can work. Alternately, you can prepend the **get-xalan** target each time you run ant to have it downloaded (if necessary) and installed in the classpath for you. You'll know to do this if you get `java.lang.ClassNotFoundException: org.apache.xalan.processor.TransformerFactoryImpl` when you run ant.
+
+### Subversion Operations ###
+
+#### Adding new modules ####
+
+When adding a new module, create the module's subdirectory using `svn mkdir --parents` and then do an `svn copy` of `src/boilerplate` to the initial revision subdirectory give yourself a well-formed starting point for the `ivy.xml` and `packager.xml` files. Example:
+```
+$ svn mkdir --parents src/modules/com.example/foo-util
+$ svn cp src/boilerplate src/modules/com.example/foo-util/1.2
+$ vi src/modules/com.example/foo-util/1.2/*
+```
+
+#### Adding new revisions ####
+
+When adding a new revision of an existing module, do an `svn copy` of the previous revision's directory and then edit the contents. With well-designed `ivy.xml` and `packager.xml` and a minor revision bump, the only changes that should be necessary are to update the publication timestamp in `ivy.xml` and the SHA1 checksum(s) in `packager.xml`. Example:
+```
+$ svn cp src/modules/com.example/foo-util/1.2 src/modules/com.example/foo-util/1.3
+$ vi src/modules/com.example/foo-util/1.3/*
+```
+
+#### Testing a new Module or Revision ####
+
+If you have added a new module or revision, you can test it like this:
+```
+$ ant -Dresolve.mod=foo-util clean repo resolve
+```
+Make sure your `~/.ivy2/packager/cache` does not already contain the downloaded archives, otherwise you won't be testing the validity of the download URLs.
+
+#### Regenerating the Repository ####
+
+To regenerate the repository, simply run the `regenrepo.sh` script, which automates what used to be the following manual steps:
+
+  1. Ensure there aren't any outstanding changes in the `src/` directory hierarchy
+  1. Run `svn update` to ensure the correct SVN revision number for the top level directory.
+  1. Run `ant repo` to regenerate the repository (and record that SVN revision number in `modules.xml`)
+  1. If you see any `*** ERROR ***` reports, fix the errors and try again (note: the build will not fail even if errors are reported)
+  1. Run `svn status repo`. If any modules or revisions have been added since the last time the repository was regenerated, they will show up with '?' question marks. For each such directory `repo/modules/foo/bar`:
+    * Run `rm -rf repo/modules/foo/bar`
+    * Run `svn copy src/modules/foo/bar repo/modules/foo/bar`
+    * Run `svn propdel svn:mergeinfo repo/modules/foo/bar`
+  1. If any `svn copy`ing was done in the previous step, Re-run `ant repo`
+
+Once the repository has been updated, a single `svn commit repo` atomically updates it.
+
+## Ivy Module Definitions (`ivy.xml` files) ##
+
+### Organization ###
+
+Try to discover and follow existing precedents (if any) for the value of the "organisation" attribute.
+
+Ivy RoundUp attempts to follow Java package naming conventions whenever possible. Be sure that the entity that owns the associated DNS domain is the same as the entity that created the software.
+
+This rule is not entirely strict. For example, the current reference implementation of the JSR 303 Validation API lives under `javax.validation`, even though the code is provided by the Hibernate project.
+
+### Configurations ###
+
+Define module configurations carefully. If other modules reference configurations in your module, and the those configurations change, things can get messed up very quickly. So maintaining backwards compatibility (within Ivy RoundUp) is important.
+
+For this reason generally it's safer to define new configurations rather than changing or removing old ones.
+
+All modules should have a **default** configuration, which should best reflect the "normal" or "expected" usage of the module. Use your best judgement here, and err on the side of including more artifacts rather than less. However, if **default** would be the _only_ configuration, then don't define any configurations at all, because ivy will add **default** for you implicitly.
+
+The point is to give people a "quick and dirty" way to reference your module using the default configuration, at the possible cost of pulling in more than they really need. In addition, provide additional non-default configurations for more specific and precise situations.
+
+Don't be afraid to define configurations, they're very useful. Don't forget that the same artifact can be part of more than one configuration. And having more configurations than necessary doesn't really cause any harm; users can just ignore them. On the other hand, not having enough precision or granularity in configurations can lead to problems.
+
+On the other hand, avoid useless configurations. For example, "test" configurations are not useful: the tests have already been run long ago by the originators of the software.
+
+For modules that have different configurations for different JDK versions, let the newer JDK configuration(s) be the default, while requiring specific configuration settings for older JDK versions (especially JDK 1.3 or earlier). This is a strategy that gets more, not less, correct as time goes forward and people upgrade to newer JDK versions.
+
+Some modules have their code split into several JARs, e.g., `foo-core.jar`, `foo-util.jar`, etc. For such modules, there is typically a separate configuration that corresponds to each of these JARs. In such cases, also include an **all** configuration that includes all of the JARs. If in addition the module provides its own consolidated `foo.jar` containing all of the other JARs put together, put it under a **full** configuration. See [Spring 2.5.6](http://ivyroundup.googlecode.com/svn/trunk/repo/modules/org.springframework/spring/2.5.6/ivy.xml) for an example.
+
+#### Source Configurations ####
+
+If a module only publishes one source artifact, don't assign it to a configuration. However, for modules that publish source artifacts that correspond to specific JAR artifacts, put the source artifacts in the same configurations as their corresponding JAR artifacts; see the [Spring 3.0.4](http://ivyroundup.googlecode.com/svn/trunk/repo/modules/org.springframework/spring/3.0.4/ivy.xml) module for an example of this.
+
+### Dependencies ###
+
+#### Consistency ####
+
+Needless to say, all dependency organisation and module names must be consistent with the naming used in Ivy RoundUp. In order to keep Ivy RoundUp self-consistent, no dependencies should exist that point to modules or revisions that don't exist in Ivy RoundUp (this will cause the build to fail in any case). If you must, include the dependency to a non-existent module in a commented out section containing the string "TODO" until the module can be added, and then go back and correct it later.
+
+Ensure dependencies are correct with respect to the configurations of the module you're working with, as well as those of the module being depended on.
+
+#### Revision Ranges ####
+
+When module A depends on module B, it is the maintainer's responsibility to figure out to the best of his/her ability exactly _which_ revisions of module B are compatible with module A. This is because the two extremes ("too tight" and "too loose") must be avoided: specifying only a single (exact) revision of B when many revisions are compatible with A ("too tight") will likely cause unnecessary conflicts, when someone tries to use your module with another module that depends on a different revision of B. On the other hand, specifying a very wide range of revisions that includes incompatible ones ("too loose") is even worse, because the ivy resolution will succeed but then the code won't run properly.
+
+An important special case of this is when you make assumptions about the future: such assumptions can be dangerous (this applies to life in general too :-) For example, suppose the latest revision of module B is 1.5.3, and you specify module A depends on B with `rev="1.+"`, or `rev="[1.5.3,2.0)"`, or somesuch. Then you are effectively predicting the future: you're declaring that the developers of module B will not introduce an API-breaking change in their code without a major version number increase. Unless you have actually verified this assumption (e.g., a stated policy of module B) then don't make it.
+
+Of course, if you know there are no future 1.x revisions forthcoming (2.0 has been released and is stable, etc.) then you are no longer "predicting the future" so the dependency's correctness can be verified first.
+
+Note however that how ivy handles revision ranges is up to the user. Ivy's default conflict manager is currently `latest-revision` which ignores dependency upper bounds! The `latest-compatible` is supposed to make a more careful decision. There is also the possibility of setting `force="true"` on dependencies. This is an area for discussion.
+
+#### Transitive Dependencies ####
+
+If module A explicitly depends on modules B and C, then even if module B also depends on module C, both dependencies need to be explicitly stated in A's dependency list. In other words, don't rely on some other module to do your depending for you, as that could change in the future.
+
+#### Avoid `<artifact>` tags ####
+
+In general, try to avoid using `<artifact>` sub-tags in dependencies. If you have to use them, then that's an indication that the module you're depending on has an incomplete set of configurations.
+
+Instead, modify or create the configurations in the target module so you can get what you want without the `<artifact>` tags, i.e., simply by specifying the right configuration(s) in your dependency.
+
+## Packager XML files (`packager.xml`) files ##
+
+Make use of the `${ivy.packager.*} `pre-defined properties to avoid typos and make future revision upgrades easier.
+
+SHA1 checksums can be generated via the command `openssl sha1 foobar-1.2.3.tar.gz`.
